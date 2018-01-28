@@ -1,6 +1,6 @@
-#include "./pindefs.h"
-#include "./gpio.h"
-#include "./usb.h"
+#include "./src/pindefs.h"
+#include "./src/gpio.h"
+#include "./src/usb.h"
 
 void pause(int loops){
     return;
@@ -14,19 +14,6 @@ int main(void) {
     init_usb();
 
     while(1) {
-        int tick = 30000;
-        led_on(LED0);
-        pause(tick);
-        led_on(LED1);
-        pause(tick);
-        led_on(LED2);
-        pause(tick);
-        led_off(LED0);
-        pause(tick);
-        led_off(LED1);
-        pause(tick);
-        led_off(LED2);
-        pause(tick);
 		usb_poll();
     }
 }

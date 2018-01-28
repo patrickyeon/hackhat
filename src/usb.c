@@ -1,5 +1,4 @@
 // heavy "inspiration" from the libopencm3 examples, so this is LGPL3
-#include <stdlib.h>
 #include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/usb/usbd.h>
@@ -8,6 +7,51 @@
 
 #include "./usb.h"
 #include "./pindefs.h"
+
+typedef struct rbuff_t {
+    char *buff;
+    size_t start;
+    size_t end;
+    size_t len;
+} rbuff_t;
+
+static char rbuff[2][65];
+static rbuff_t inbuff = {rbuff[0], 0, 0, 64};
+static rbuff_t outbuff = {rbuff[1], 0, 0, 64};
+
+static int rb_cap(rbuff_t *rb) {
+    if (rb->end < rb->start) {
+        return rb->len - (rb->end + rb->len - rb->start);
+    } else {
+        return rb->len - (rb->end - rb->start);
+    }
+}
+
+static int rb_push(rbuff_t *rb, char *buff, size_t len) {
+    int i;
+    for (i = 0; i < len && rb->start != rb->end; i++) {
+        buff[i] = rb->buff[rb->start++];
+        rb->start %= rb->len;
+    }
+    return i;
+}
+
+static int rb_pop(rbuff_t *rb, char *buff, size_t len) {
+    int i;
+    for (i = 0; i < len && (rb->end + 1) % rb->len != rb->start; i++) {
+        rb->buff[rb->end++] = buff[i];
+        rb->end %= rb->len;
+    }
+    return i;
+}
+
+int usb_read(char *buff, size_t len) {
+    return rb_pop(&inbuff, buff, len);
+}
+
+int usb_write(char *buff, size_t len) {
+    return rb_push(&outbuff, buff, len);
+}
 
 static const struct usb_device_descriptor dev = {
 	.bLength = USB_DT_DEVICE_SIZE,
@@ -187,14 +231,15 @@ static void cdcacm_data_rx_cb(usbd_device *usbd_dev, uint8_t ep)
 	(void)ep;
 
 	char buf[64];
-	int len = usbd_ep_read_packet(usbd_dev, 0x01, buf, 64);
-
-    for (int i = 0; i < len; i++) {
-        if ('a' <= buf[i] && buf[i] <= 'z') {
-            buf[i] -= ('a' - 'A');
-        }
+    int maxread = rb_cap(&inbuff);
+    if (maxread > 0) {
+	    int len = usbd_ep_read_packet(usbd_dev, 0x01, buf, maxread);
+        rb_push(&inbuff, buf, len);
     }
-	if (len) {
+
+    int maxwrite = rb_cap(&outbuff);
+    if (maxwrite >= 0 && maxwrite < outbuff.len) {
+        int len = rb_pop(&outbuff, buf, 64);
 		while (usbd_ep_write_packet(usbd_dev, 0x82, buf, len) == 0);
 	}
 }
