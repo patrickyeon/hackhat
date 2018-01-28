@@ -7,43 +7,11 @@
 
 #include "./usb.h"
 #include "./pindefs.h"
-
-typedef struct rbuff_t {
-    char *buff;
-    size_t start;
-    size_t end;
-    size_t len;
-} rbuff_t;
+#include "./ringbuffer.h"
 
 static char rbuff[2][65];
 static rbuff_t inbuff = {rbuff[0], 0, 0, 64};
 static rbuff_t outbuff = {rbuff[1], 0, 0, 64};
-
-static int rb_cap(rbuff_t *rb) {
-    if (rb->end < rb->start) {
-        return rb->len - (rb->end + rb->len - rb->start);
-    } else {
-        return rb->len - (rb->end - rb->start);
-    }
-}
-
-static int rb_push(rbuff_t *rb, char *buff, size_t len) {
-    int i;
-    for (i = 0; i < len && rb->start != rb->end; i++) {
-        buff[i] = rb->buff[rb->start++];
-        rb->start %= rb->len;
-    }
-    return i;
-}
-
-static int rb_pop(rbuff_t *rb, char *buff, size_t len) {
-    int i;
-    for (i = 0; i < len && (rb->end + 1) % rb->len != rb->start; i++) {
-        rb->buff[rb->end++] = buff[i];
-        rb->end %= rb->len;
-    }
-    return i;
-}
 
 int usb_read(char *buff, size_t len) {
     return rb_pop(&inbuff, buff, len);

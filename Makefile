@@ -9,9 +9,10 @@ RM = rm
 OBJCOPY = objcopy
 MKDIR = mkdir -p
 
-ARM_ARCH_FLAGS = -mthumb -mcpu=cortex-m0
+CFLAGS = -g -std=c99
 
-ARM_CFLAGS = -I$(OPENCM3_DIR)/include -DSTM32F0 $(ARM_ARCH_FLAGS) -g -std=c99
+ARM_ARCH_FLAGS = -mthumb -mcpu=cortex-m0
+ARM_CFLAGS = -I$(OPENCM3_DIR)/include -DSTM32F0 $(ARM_ARCH_FLAGS) $(CFLAGS)
 #ARM_CFLAGS += -fno-common -ffunction-sections -fdata-sections
 ARM_LDLIBS = -lopencm3_stm32f0
 ARM_LDSCRIPT = $(OPENCM3_DIR)/lib/stm32/f0/stm32f04xz6.ld
@@ -19,29 +20,49 @@ ARM_LDFLAGS = -L$(OPENCM3_DIR)/lib --static -nostartfiles -T$(ARM_LDSCRIPT)
 ARM_LDFLAGS += $(ARM_ARCH_FLAGS)
 
 SRCDIR = src/
+TESTDIR = test/
 BUILDDIR = build/
-OBJDIR = $(BUILDDIR)objs/
+UNITYDIR = Unity/
+TARGETDIR = $(BUILDDIR)target/
+NATIVEDIR = $(BUILDDIR)native/
+NATIVETESTDIR = $(NATIVEDIR)test/
+RESULTDIR = $(BUILDDIR)results/
+
+# I don't like it, but until something better works out
+_dummy := $(shell $(MKDIR) $(TARGETDIR) $(NATIVEDIR) $(NATIVETESTDIR) $(RESULTDIR))
 
 SRCFILES = $(wildcard $(SRCDIR)*.c)
+TESTFILES = $(wildcard $(TESTDIR)*.c)
 
-main: $(patsubst $(SRCDIR)%.c,$(OBJDIR)%.o,$(SRCFILES))
-	$(ARM_PREFIX)$(CC) $(ARM_CFLAGS) -c main.c -o $(OBJDIR)main.o
-	$(ARM_PREFIX)$(LD) $(ARM_LDFLAGS) $(OBJDIR)*.o\
-			$(ARM_LDLIBS) -o $(OBJDIR)main.elf
-	$(ARM_PREFIX)$(OBJCOPY) -Obinary $(OBJDIR)main.elf $(OBJDIR)main.bin
-	$(ARM_PREFIX)$(OBJCOPY) -Oihex $(OBJDIR)main.elf $(OBJDIR)main.hex
+RESULTS = $(patsubst $(TESTDIR)test_%.c,$(RESULTDIR)%.txt,$(TESTFILES))
 
-$(OBJDIR)%.o:: $(SRCDIR)%.c $(OBJDIR)
+main: $(patsubst $(SRCDIR)%.c,$(TARGETDIR)%.o,$(SRCFILES))
+	$(ARM_PREFIX)$(CC) $(ARM_CFLAGS) -c main.c -o $(TARGETDIR)main.o
+	$(ARM_PREFIX)$(LD) $(ARM_LDFLAGS) $(TARGETDIR)*.o\
+			$(ARM_LDLIBS) -o $(TARGETDIR)main.elf
+	$(ARM_PREFIX)$(OBJCOPY) -Obinary $(TARGETDIR)main.elf $(TARGETDIR)main.bin
+	$(ARM_PREFIX)$(OBJCOPY) -Oihex $(TARGETDIR)main.elf $(TARGETDIR)main.hex
+
+test: $(RESULTS)
+	cat $^
+
+$(RESULTDIR)%.txt: $(NATIVETESTDIR)%.o
+	-./$< > $@ 2>&1
+
+$(NATIVETESTDIR)%.o:: $(TESTDIR)test_%.c $(SRCDIR)%.c
+	$(CC) -I$(UNITYDIR)src $(TESTDIR)test_$*.c $(SRCDIR)$*.c $(UNITYDIR)src/unity.c -o $@
+
+$(TARGETDIR)%.o:: $(SRCDIR)%.c
 	$(ARM_PREFIX)$(CC) $(ARM_CFLAGS) -c $< -o $@
 
-$(OBJDIR):
-	$(MKDIR) $(OBJDIR)
+$(NATIVEDIR)%.o:: $(SRCDIR)%.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	$(RM) -rf $(BUILDDIR)
+	find $(BUILDDIR) -type f -delete
 
 flash: main
-	sudo $(ARM_PREFIX)gdb $(OBJDIR)main.elf\
+	sudo $(ARM_PREFIX)gdb $(TARGETDIR)main.elf\
 			-ex "target extended-remote /dev/ttyBMPgdb"\
 			-ex "monitor swdp_scan"\
 			-ex "attach 1"\
