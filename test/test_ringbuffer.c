@@ -6,6 +6,23 @@ void test_create_empty(void) {
     TEST_ASSERT_EQUAL(64, rb_cap(&rb));
 }
 
+void test_no_rb_collision(void) {
+    mk_rb(inbuff, 20);
+    mk_rb(outbuff, 20);
+    uint8_t instr[21] = "mimimimimimimimimimi";
+    uint8_t outstr[21] = "txtxtxtxtxtxtxtxtxtx";
+    rb_push(&inbuff, instr, 20);
+    rb_push(&outbuff, outstr, 20);
+    TEST_ASSERT_EQUAL_STRING_LEN(instr, inbuff.buff, 20);
+    TEST_ASSERT_EQUAL_STRING_LEN(outstr, outbuff.buff, 20);
+
+    uint8_t buff[21];
+    rb_pop(&outbuff, buff, 20);
+    TEST_ASSERT_EQUAL_STRING_LEN(outstr, buff, 20);
+    rb_pop(&inbuff, buff, 20);
+    TEST_ASSERT_EQUAL_STRING_LEN(instr, buff, 20);
+}
+
 void test_add_string(void) {
     mk_rb(rb, 64);
     uint8_t str[10] = "hello";

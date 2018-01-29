@@ -9,15 +9,14 @@
 #include "./pindefs.h"
 #include "./ringbuffer.h"
 
-static char rbuff[2][65];
-static rbuff_t inbuff = {rbuff[0], 0, 0, 64};
-static rbuff_t outbuff = {rbuff[1], 0, 0, 64};
+mk_rb(inbuff, 64);
+mk_rb(outbuff, 64);
 
-int usb_read(char *buff, size_t len) {
+int usb_read(uint8_t *buff, size_t len) {
     return rb_pop(&inbuff, buff, len);
 }
 
-int usb_write(char *buff, size_t len) {
+int usb_write(uint8_t *buff, size_t len) {
     return rb_push(&outbuff, buff, len);
 }
 
@@ -198,18 +197,14 @@ static void cdcacm_data_rx_cb(usbd_device *usbd_dev, uint8_t ep)
 {
 	(void)ep;
 
-	char buf[64];
+    // I feel dirty with the number of buffers being ultimately used to do this,
+    //  but oh well.
+	uint8_t buf[64];
     int maxread = rb_cap(&inbuff);
     if (maxread > 0) {
 	    int len = usbd_ep_read_packet(usbd_dev, 0x01, buf, maxread);
         rb_push(&inbuff, buf, len);
     }
-
-    int maxwrite = rb_cap(&outbuff);
-    if (maxwrite >= 0 && maxwrite < outbuff.len) {
-        int len = rb_pop(&outbuff, buf, 64);
-		while (usbd_ep_write_packet(usbd_dev, 0x82, buf, len) == 0);
-	}
 }
 
 static void cdcacm_set_config(usbd_device *usbd_dev, uint16_t wValue)
@@ -243,4 +238,11 @@ void init_usb(void)
 
 void usb_poll(void) {
     usbd_poll(usbd_dev);
+
+    uint8_t buf[64];
+    int maxwrite = outbuff.len - rb_cap(&outbuff) - 1;
+    if (maxwrite > 0) {
+        int len = rb_pop(&outbuff, buf, 64);
+		while (usbd_ep_write_packet(usbd_dev, 0x82, buf, len) == 0);
+	}
 }
