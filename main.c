@@ -1,12 +1,20 @@
 #include "./src/pindefs.h"
 #include "./src/gpio.h"
+#include "./src/servo.h"
+#include "./src/timer.h"
 #include "./src/usb.h"
 
+#include <stdint.h>
+
+#define MIN(A,B) (A < B ? A : B)
+#define MAX(A,B) (A > B ? A : B)
 
 // we're going to do a rough duty-cycling of the LEDs to control brightness.
 //  Here's the period of one of those cycles.
 const uint8_t t_led = 20;
 
+// tracking systick
+volatile uint32_t systime = 0;
 
 // turn a uint8_t into a hex representation like 'B2 ' and output over USB
 static void hexout(uint8_t val) {
@@ -25,8 +33,10 @@ static void hexout(uint8_t val) {
 
 
 int main(void) {
+    init_timers();
     init_gpio();
     init_usb();
+    init_servo(500, 2500);
 
     struct leds_t {
         // leds on?
@@ -37,8 +47,10 @@ int main(void) {
         int dc;
     };
 
-    struct leds_t leds = {false, false, false, 0};
+    struct leds_t leds = {false, false, false, 1};
     int loopcount = 0;
+    uint32_t angle = 500;
+    bool pulsed = false, sweep = false;
 
     uint8_t inchar;
     while(1) {
@@ -67,6 +79,23 @@ int main(void) {
                     leds.dc = (leds.dc >= (t_led - 1) ?
                                (t_led - 1) : leds.dc + 1);
                     break;
+                // H/L to turn the servo
+                case 'h':
+                case 'H':
+                    angle = MAX(50, angle) - 50;
+                    steer(angle);
+                    sweep = false;
+                    break;
+                case 'l':
+                case 'L':
+                    angle = MIN(1000, angle + 50);
+                    steer(angle);
+                    sweep = false;
+                    break;
+                case 's':
+                case 'S':
+                    sweep = true;
+                    break;
                 // otherwise just echo out the character in hex
                 default:
                     hexout(inchar);
@@ -88,6 +117,22 @@ int main(void) {
         } else {
             led_off(LED2);
         }
+        if (systime % 20 == 0) {
+            if (!pulsed) {
+                if (sweep && systime % 80 == 0) {
+                    angle = angle < 1000 ? angle + 50 : 0;
+                    steer(angle);
+                }
+                pulse();
+                pulsed = true;
+            }
+        } else {
+            pulsed = false;
+        }
 		usb_poll();
     }
+}
+
+void sys_tick_handler(void) {
+    systime = (systime + 1) % 10000;
 }

@@ -63,7 +63,7 @@ clean:
 
 flash: main
 	sudo $(ARM_PREFIX)gdb $(TARGETDIR)main.elf\
-			-ex "target extended-remote /dev/ttyBMPgdb"\
+			-ex "target extended-remote /dev/ttyBmpGdb"\
 			-ex "monitor swdp_scan"\
 			-ex "attach 1"\
 			-ex "load"\

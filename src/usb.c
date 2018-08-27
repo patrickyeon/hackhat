@@ -1,5 +1,4 @@
 // heavy "inspiration" from the libopencm3 examples, so this is LGPL3
-#include <libopencm3/stm32/rcc.h>
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
@@ -227,7 +226,6 @@ static usbd_device *usbd_dev;
 
 void init_usb(void)
 {
-    rcc_clock_setup_in_hse_8mhz_out_48mhz();
 	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, USBDP | USBDM);
 
 	usbd_dev = usbd_init(&st_usbfs_v2_usb_driver, &dev, &config,

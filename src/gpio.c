@@ -7,7 +7,7 @@
 void init_gpio(void){
     rcc_periph_clock_enable(RCC_GPIOA);
     gpio_mode_setup(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, ALL_LEDS);
-    gpio_clear(GPIOA, (ALL_LEDS));
+    gpio_clear(GPIOA, ALL_LEDS);
 }
 
 void led_on(uint16_t leds){
