@@ -3,8 +3,13 @@
 
 #include <stdint.h>
 
+extern struct leds_t {
+    bool led0;
+    bool led1;
+    bool led2;
+} leds;
+
 void init_gpio(void);
-void led_on(uint16_t leds);
-void led_off(uint16_t leds);
+void leds_dc(uint16_t duty);
 
 #endif // GPIO_H

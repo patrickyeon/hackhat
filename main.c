@@ -11,7 +11,7 @@
 
 // we're going to do a rough duty-cycling of the LEDs to control brightness.
 //  Here's the period of one of those cycles.
-const uint8_t t_led = 20;
+static uint16_t t_led = 500;
 
 // tracking systick
 volatile uint32_t systime = 0;
@@ -32,22 +32,20 @@ static void hexout(uint8_t val) {
 }
 
 
+static uint8_t tolower(uint8_t c) {
+    if ('A' <= c && c <= 'Z') {
+        c = (c - 'A') + 'a';
+    }
+    return c;
+}
+
+
 int main(void) {
     init_timers();
     init_gpio();
     init_usb();
     init_servo(500, 2500);
 
-    struct leds_t {
-        // leds on?
-        bool led0;
-        bool led1;
-        bool led2;
-        // duty cycle for on time, 0..(t_led - 1)
-        int dc;
-    };
-
-    struct leds_t leds = {false, false, false, 1};
     int loopcount = 0;
     uint32_t angle = 500;
     bool pulsed = false, sweep = false;
@@ -57,6 +55,7 @@ int main(void) {
         loopcount = (loopcount + 1) % t_led;
         // check for a new (single-key) command
         if (usb_read(&inchar, 1) == 1) {
+            inchar = tolower(inchar);
             switch (inchar) {
                 // 1-3 toggle that LED
                 case '1':
@@ -70,30 +69,26 @@ int main(void) {
                     break;
                 // J decrease brightness (vim style)
                 case 'j':
-                case 'J':
-                    leds.dc = (leds.dc <= 0 ? 0 : leds.dc - 1);
+                    t_led = (t_led <= 50 ? 0 : t_led - 50);
+                    leds_dc(t_led);
                     break;
                 // K increase brightness
                 case 'k':
-                case 'K':
-                    leds.dc = (leds.dc >= (t_led - 1) ?
-                               (t_led - 1) : leds.dc + 1);
+                    t_led = (t_led >= 949 ? 999 : t_led + 50);
+                    leds_dc(t_led);
                     break;
                 // H/L to turn the servo
                 case 'h':
-                case 'H':
                     angle = MAX(50, angle) - 50;
                     steer(angle);
                     sweep = false;
                     break;
                 case 'l':
-                case 'L':
                     angle = MIN(1000, angle + 50);
                     steer(angle);
                     sweep = false;
                     break;
                 case 's':
-                case 'S':
                     sweep = true;
                     break;
                 // otherwise just echo out the character in hex
@@ -101,21 +96,6 @@ int main(void) {
                     hexout(inchar);
                     break;
             }
-        }
-        if (leds.dc > loopcount && leds.led0) {
-            led_on(LED0);
-        } else {
-            led_off(LED0);
-        }
-        if (leds.dc > loopcount && leds.led1) {
-            led_on(LED1);
-        } else {
-            led_off(LED1);
-        }
-        if (leds.dc > loopcount && leds.led2) {
-            led_on(LED2);
-        } else {
-            led_off(LED2);
         }
         if (systime % 20 == 0) {
             if (!pulsed) {
