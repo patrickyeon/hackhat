@@ -1,5 +1,6 @@
 #include "./src/pindefs.h"
 #include "./src/gpio.h"
+#include "./src/max30105.h"
 #include "./src/servo.h"
 #include "./src/timer.h"
 #include "./src/usb.h"
@@ -32,7 +33,7 @@ static void hexout(uint8_t val) {
 }
 
 
-static uint8_t tolower(uint8_t c) {
+static uint8_t to_lower(uint8_t c) {
     if ('A' <= c && c <= 'Z') {
         c = (c - 'A') + 'a';
     }
@@ -45,17 +46,21 @@ int main(void) {
     init_gpio();
     init_usb();
     init_servo(500, 2500);
+    init_psens();
 
-    int loopcount = 0;
     uint32_t angle = 500;
-    bool pulsed = false, sweep = false;
+    bool sweep = false;
 
     uint8_t inchar;
+    uint32_t last_loop = 0;
     while(1) {
-        loopcount = (loopcount + 1) % t_led;
+        do {
+            usb_poll();
+        } while (last_loop == systime);
+        last_loop = systime;
         // check for a new (single-key) command
         if (usb_read(&inchar, 1) == 1) {
-            inchar = tolower(inchar);
+            inchar = to_lower(inchar);
             switch (inchar) {
                 // 1-3 toggle that LED
                 case '1':
@@ -88,8 +93,13 @@ int main(void) {
                     steer(angle);
                     sweep = false;
                     break;
+                // S to have a "sweep" pattern on the servo
                 case 's':
                     sweep = true;
+                    break;
+                // T to read the particle sensor's temperature
+                case 't':
+                    hexout(psens_temp());
                     break;
                 // otherwise just echo out the character in hex
                 default:
@@ -98,18 +108,12 @@ int main(void) {
             }
         }
         if (systime % 20 == 0) {
-            if (!pulsed) {
-                if (sweep && systime % 80 == 0) {
-                    angle = angle < 1000 ? angle + 50 : 0;
-                    steer(angle);
-                }
-                pulse();
-                pulsed = true;
+            if (sweep && systime % 80 == 0) {
+                angle = angle < 950 ? angle + 50 : 0;
+                steer(angle);
             }
-        } else {
-            pulsed = false;
+            pulse();
         }
-		usb_poll();
     }
 }
 
