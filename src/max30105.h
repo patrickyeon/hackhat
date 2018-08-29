@@ -3,7 +3,14 @@
 
 #include <stdint.h>
 
+typedef struct {
+    uint32_t ir;
+    uint32_t red;
+} pdat_t;
+
 void init_psens(void);
-uint8_t psens_temp(void);
+int8_t psens_temp(void);
+pdat_t psens_read(void);
+void psens_red(bool);
 
 #endif // MAX30105_H
