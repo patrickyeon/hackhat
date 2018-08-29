@@ -1,4 +1,5 @@
-.PHONY: clean flash test
+.PHONY: clean flash test demo hat
+default: demo
 
 ARM_PREFIX = arm-none-eabi-
 OPENCM3_DIR = libopencm3
@@ -29,19 +30,25 @@ NATIVETESTDIR = $(NATIVEDIR)test/
 RESULTDIR = $(BUILDDIR)results/
 
 # I don't like it, but until something better works out
-_dummy := $(shell $(MKDIR) $(TARGETDIR) $(NATIVEDIR) $(NATIVETESTDIR) $(RESULTDIR))
+_dummy := $(shell $(MKDIR) $(TARGETDIR) $(TARGETDIR)main/ $(NATIVEDIR) $(NATIVETESTDIR) $(RESULTDIR))
 
 SRCFILES = $(wildcard $(SRCDIR)*.c)
 TESTFILES = $(wildcard $(TESTDIR)*.c)
 
 RESULTS = $(patsubst $(TESTDIR)test_%.c,$(RESULTDIR)%.txt,$(TESTFILES))
 
-main: $(patsubst $(SRCDIR)%.c,$(TARGETDIR)%.o,$(SRCFILES))
-	$(ARM_PREFIX)$(CC) $(ARM_CFLAGS) -c main.c -o $(TARGETDIR)main.o
-	$(ARM_PREFIX)$(LD) $(ARM_LDFLAGS) $(TARGETDIR)*.o\
-			$(ARM_LDLIBS) -o $(TARGETDIR)main.elf
-	$(ARM_PREFIX)$(OBJCOPY) -Obinary $(TARGETDIR)main.elf $(TARGETDIR)main.bin
-	$(ARM_PREFIX)$(OBJCOPY) -Oihex $(TARGETDIR)main.elf $(TARGETDIR)main.hex
+src:  $(patsubst $(SRCDIR)%.c,$(TARGETDIR)%.o,$(SRCFILES))
+
+demo: src $(TARGETDIR)demo.elf
+hat: src $(TARGETDIR)hat.elf
+
+$(TARGETDIR)%.elf: %.c
+	$(ARM_PREFIX)$(CC) $(ARM_CFLAGS) -c $*.c -o $(TARGETDIR)main/$*.o
+	$(ARM_PREFIX)$(LD) $(ARM_LDFLAGS) $(TARGETDIR)*.o $(TARGETDIR)main/$*.o\
+			$(ARM_LDLIBS) -o $(TARGETDIR)$*.elf
+	$(ARM_PREFIX)$(OBJCOPY) -Obinary $(TARGETDIR)$*.elf $(TARGETDIR)$*.bin
+	$(ARM_PREFIX)$(OBJCOPY) -Oihex $(TARGETDIR)$*.elf $(TARGETDIR)$*.hex
+	cp $(TARGETDIR)$*.elf $(TARGETDIR)latest.elf
 
 test: $(RESULTS)
 	cat $^
@@ -61,8 +68,8 @@ $(NATIVEDIR)%.o:: $(SRCDIR)%.c
 clean:
 	find $(BUILDDIR) -type f -delete
 
-flash: main
-	sudo $(ARM_PREFIX)gdb $(TARGETDIR)main.elf\
+flash:
+	$(ARM_PREFIX)gdb $(TARGETDIR)latest.elf\
 			-ex "target extended-remote /dev/ttyBmpGdb"\
 			-ex "monitor swdp_scan"\
 			-ex "attach 1"\
