@@ -3,8 +3,8 @@
 
 #include <stdint.h>
 
-void init_servo(uint32_t min, uint32_t max);
-void pulse(void);
-void steer(uint32_t value);
+void servo_init(uint32_t min, uint32_t max);
+void servo_pulse(void);
+void servo_steer(uint32_t value);
 
 #endif // SERVO_H

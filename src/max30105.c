@@ -16,7 +16,7 @@ static void _read(uint8_t reg, uint8_t *buff, uint8_t len) {
     i2c_transfer7(I2C1, ADDR, &reg, 1, buff, len);
 }
 
-void init_psens(void) {
+void max30105_init(void) {
     rcc_periph_clock_enable(RCC_I2C1);
     gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, (SCL | SDA));
     gpio_set_af(GPIOA, GPIO_AF4, (SCL | SDA));
@@ -39,11 +39,11 @@ void init_psens(void) {
     _write(0x08, 0x10);
 }
 
-void psens_red(bool on) {
-    _write(0x0c, on ? 0x0f : 0x00);
+void max30105_red_pwr(uint8_t pwr) {
+    _write(0x0c, pwr);
 }
 
-int8_t psens_temp(void) {
+int8_t max30105_temp(void) {
     // TODO how do we handle timeouts, NACKs?
     // TODO do we want to know the fractional temperature too?
     uint8_t resp = 0;
@@ -61,7 +61,7 @@ int8_t psens_temp(void) {
     return (int8_t)resp;
 }
 
-pdat_t psens_read(void) {
+pdat_t max30105_read(void) {
     uint8_t resp = 0;
     uint8_t buff[6];
     //  get the write pointer, decrement it, set that as read pointer, then

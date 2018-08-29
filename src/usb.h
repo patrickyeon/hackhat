@@ -3,7 +3,7 @@
 
 #include <stdlib.h>
 
-void init_usb(void);
+void usb_init(void);
 void usb_poll(void);
 
 int usb_read(uint8_t *buff, size_t len);

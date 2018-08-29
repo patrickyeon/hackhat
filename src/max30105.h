@@ -8,9 +8,9 @@ typedef struct {
     uint32_t red;
 } pdat_t;
 
-void init_psens(void);
-int8_t psens_temp(void);
-pdat_t psens_read(void);
-void psens_red(bool);
+void max30105_init(void);
+int8_t max30105_temp(void);
+pdat_t max30105_read(void);
+void max30105_red_pwr(uint8_t pwr);
 
 #endif // MAX30105_H

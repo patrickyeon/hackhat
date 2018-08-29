@@ -9,7 +9,7 @@ extern struct leds_t {
     bool led2;
 } leds;
 
-void init_gpio(void);
+void gpio_init(void);
 void leds_dc(uint16_t duty);
 
 #endif // GPIO_H

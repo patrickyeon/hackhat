@@ -14,9 +14,6 @@
 //  Here's the period of one of those cycles.
 static uint16_t t_led = 500;
 
-// tracking systick
-volatile uint32_t systime = 0;
-
 // turn a uint8_t into a hex representation like 'B2 ' and output over USB
 static void hexout(uint8_t val) {
     uint8_t buff[3];
@@ -31,6 +28,7 @@ static void hexout(uint8_t val) {
     buff[2] = ' ';
     usb_write(buff, 3);
 }
+
 
 static void valout(uint32_t val) {
     uint8_t buff[11];
@@ -56,18 +54,12 @@ static uint8_t to_lower(uint8_t c) {
 }
 
 
-static void syswait(uint32_t ms) {
-    uint32_t tstart = systime;
-    while (systime < tstart + ms);
-}
-
-
 int main(void) {
-    init_timers();
-    init_gpio();
-    init_usb();
-    init_servo(500, 2500);
-    init_psens();
+    timers_init();
+    gpio_init();
+    usb_init();
+    servo_init(500, 2500);
+    max30105_init();
 
     uint32_t angle = 500;
     bool sweep = false;
@@ -78,8 +70,8 @@ int main(void) {
     while(1) {
         do {
             usb_poll();
-        } while (last_loop == systime);
-        last_loop = systime;
+        } while (last_loop == systime());
+        last_loop = systime();
         // check for a new (single-key) command
         if (usb_read(&inchar, 1) == 1) {
             inchar = to_lower(inchar);
@@ -107,12 +99,12 @@ int main(void) {
                 // H/L to turn the servo
                 case 'h':
                     angle = MAX(50, angle) - 50;
-                    steer(angle);
+                    servo_steer(angle);
                     sweep = false;
                     break;
                 case 'l':
                     angle = MIN(1000, angle + 50);
-                    steer(angle);
+                    servo_steer(angle);
                     sweep = false;
                     break;
                 // S to have a "sweep" pattern on the servo
@@ -121,11 +113,11 @@ int main(void) {
                     break;
                 // T to read the particle sensor's temperature
                 case 't':
-                    hexout(psens_temp());
+                    hexout(max30105_temp());
                     break;
                 // P to read particle detect
                 case 'p':
-                    sensordat = psens_read();
+                    sensordat = max30105_read();
                     valout(sensordat.ir);
                     valout(sensordat.red);
                     break;
@@ -135,16 +127,12 @@ int main(void) {
                     break;
             }
         }
-        if (systime % 20 == 0) {
-            if (sweep && systime % 80 == 0) {
+        if (last_loop % 20 == 0) {
+            if (sweep && last_loop % 80 == 0) {
                 angle = angle < 950 ? angle + 50 : 0;
-                steer(angle);
+                servo_steer(angle);
             }
-            pulse();
+            servo_pulse();
         }
     }
-}
-
-void sys_tick_handler(void) {
-    systime++;
 }

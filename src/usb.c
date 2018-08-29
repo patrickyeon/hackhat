@@ -224,7 +224,7 @@ static void cdcacm_set_config(usbd_device *usbd_dev, uint16_t wValue)
 
 static usbd_device *usbd_dev;
 
-void init_usb(void)
+void usb_init(void)
 {
 	gpio_mode_setup(GPIOA, GPIO_MODE_AF, GPIO_PUPD_NONE, USBDP | USBDM);
 

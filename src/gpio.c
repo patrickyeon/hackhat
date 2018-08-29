@@ -8,7 +8,7 @@
 
 struct leds_t leds;
 
-void init_gpio(void){
+void gpio_init(void){
     rcc_periph_clock_enable(RCC_GPIOA);
     gpio_mode_setup(GPIOA, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, ALL_LEDS);
     gpio_clear(GPIOA, ALL_LEDS);

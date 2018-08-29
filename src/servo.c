@@ -10,7 +10,7 @@
 
 static uint32_t min_pulse, max_pulse, tpulse;
 
-void init_servo(uint32_t min, uint32_t max) {
+void servo_init(uint32_t min, uint32_t max) {
     min_pulse = min;
     max_pulse = max;
     tpulse = (min + max) / 2;
@@ -28,13 +28,13 @@ void init_servo(uint32_t min, uint32_t max) {
     gpio_clear(GPIOA, SERVO);
 }
 
-void steer(uint32_t value) {
+void servo_steer(uint32_t value) {
     // value in range 0..999
     uint32_t range = max_pulse - min_pulse;
     tpulse = min_pulse + (range * MIN(value, 999)) / 999;
 }
 
-void pulse(void) {
+void servo_pulse(void) {
     gpio_set(GPIOA, SERVO);
     timer_set_counter(TIM2, 0);
     timer_set_oc_value(TIM2, TIM_OC1, tpulse * 48);
