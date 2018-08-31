@@ -1,6 +1,6 @@
 [submodule "libopencm3"]
-	path = libopencm3
+	path = sw/libopencm3
 	url = https://github.com/libopencm3/libopencm3.git
 [submodule "Unity"]
-	path = Unity
+	path = sw/Unity
 	url = https://github.com/ThrowTheSwitch/Unity.git
