@@ -18,7 +18,7 @@ void gpio_init(void){
     timer_disable_preload(TIM3);
     timer_direction_up(TIM3);
     timer_continuous_mode(TIM3);
-    timer_set_oc_value(TIM3, TIM_OC2, 999);
+    timer_set_oc_value(TIM3, TIM_OC2, 1000);
     leds_dc(500);
     timer_enable_counter(TIM3);
     timer_enable_irq(TIM3, TIM_DIER_CC1IE);
@@ -26,7 +26,7 @@ void gpio_init(void){
 }
 
 void leds_dc(uint16_t duty) {
-    timer_set_oc_value(TIM3, TIM_OC1, duty <= 999 ? duty : 999);
+    timer_set_oc_value(TIM3, TIM_OC1, duty <= 1000 ? duty : 1000);
 }
 
 void tim3_isr(void) {

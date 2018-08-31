@@ -93,7 +93,7 @@ int main(void) {
                     break;
                 // K increase brightness
                 case 'k':
-                    t_led = (t_led >= 949 ? 999 : t_led + 50);
+                    t_led = (t_led >= 950 ? 1000 : t_led + 50);
                     leds_dc(t_led);
                     break;
                 // H/L to turn the servo

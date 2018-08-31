@@ -29,9 +29,9 @@ void servo_init(uint32_t min, uint32_t max) {
 }
 
 void servo_steer(uint32_t value) {
-    // value in range 0..999
+    // value in range 0..1000
     uint32_t range = max_pulse - min_pulse;
-    tpulse = min_pulse + (range * MIN(value, 999)) / 999;
+    tpulse = min_pulse + (range * MIN(value, 1000)) / 1000;
 }
 
 void servo_pulse(void) {
