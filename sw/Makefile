@@ -39,10 +39,10 @@ RESULTS = $(patsubst $(TESTDIR)test_%.c,$(RESULTDIR)%.txt,$(TESTFILES))
 
 src:  $(patsubst $(SRCDIR)%.c,$(TARGETDIR)%.o,$(SRCFILES))
 
-demo: src $(TARGETDIR)demo.elf
-hat: src $(TARGETDIR)hat.elf
+demo: $(TARGETDIR)demo.elf
+hat: $(TARGETDIR)hat.elf
 
-$(TARGETDIR)%.elf: %.c
+$(TARGETDIR)%.elf: %.c src
 	$(ARM_PREFIX)$(CC) $(ARM_CFLAGS) -c $*.c -o $(TARGETDIR)main/$*.o
 	$(ARM_PREFIX)$(LD) $(ARM_LDFLAGS) $(TARGETDIR)*.o $(TARGETDIR)main/$*.o\
 			$(ARM_LDLIBS) -o $(TARGETDIR)$*.elf
