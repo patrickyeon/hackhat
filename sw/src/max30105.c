@@ -7,6 +7,7 @@
 
 const uint8_t ADDR = 0x57;
 
+// TODO how do we handle timeouts, NACKs?
 static void _write(uint8_t reg, uint8_t value) {
     uint8_t cmd[] = {reg, value};
     i2c_transfer7(I2C1, ADDR, cmd, 2, NULL, 0);
@@ -28,6 +29,10 @@ void max30105_init(void) {
     // set particle-sensing mode with Red+IR LEDs
     _write(0x09, 0x03);
 
+    // sure, let's set all the interrupts enabled
+    _write(0x02, 0xf0);
+    _write(0x03, 0x02);
+
     // WAG about config settings
     // set sample rate fairly low, ADC range and LED power low-mid
     _write(0x0a, 0x25);
@@ -39,12 +44,49 @@ void max30105_init(void) {
     _write(0x08, 0x10);
 }
 
+uint8_t max30105_flags(void) {
+    uint8_t reg0, reg1;
+    _read(0x00, &reg0, 1);
+    _read(0x01, &reg1, 1);
+    return (reg0 & 0xf1) | (reg1 & 0x02);
+}
+
 void max30105_red_pwr(uint8_t pwr) {
     _write(0x0c, pwr);
 }
 
+void max30105_ir_pwr(uint8_t pwr) {
+    _write(0x0d, pwr);
+}
+
+void max30105_green_pwr(uint8_t pwr) {
+    _write(0x0e, pwr);
+}
+
+void max30105_averaging(uint8_t doublings) {
+    uint8_t reg;
+    _read(0x08, &reg, 1);
+    _write(0x08, (reg & 0x1f) | ((doublings & 0x07) << 5));
+}
+
+void max30105_adc_config(int8_t lsb_size, int8_t sample_rate,
+                         int8_t resolution) {
+    // set any of the arguments negative to have them ignored
+    uint8_t reg;
+    _read(0x0a, &reg, 1);
+    if (lsb_size >= 0) {
+        reg = (reg & 0x9f) | ((lsb_size & 0x03) << 5);
+    }
+    if (sample_rate >= 0) {
+        reg = (reg & 0xe3) | ((sample_rate & 0x07) << 2);
+    }
+    if (resolution >= 0) {
+        reg = (reg & 0xfc) | (resolution & 0x03);
+    }
+    _write(0x0a, reg);
+}
+
 int8_t max30105_temp(void) {
-    // TODO how do we handle timeouts, NACKs?
     // TODO do we want to know the fractional temperature too?
     uint8_t resp = 0;
 

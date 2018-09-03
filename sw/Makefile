@@ -68,6 +68,7 @@ $(NATIVEDIR)%.o:: $(SRCDIR)%.c
 clean:
 	find $(BUILDDIR) -type f -delete
 
+# FIXME this won't detect that latest.elf needs to be updated
 flash:
 	$(ARM_PREFIX)gdb $(TARGETDIR)latest.elf\
 			-ex "target extended-remote /dev/ttyBmpGdb"\

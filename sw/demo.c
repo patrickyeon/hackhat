@@ -54,17 +54,67 @@ static uint8_t to_lower(uint8_t c) {
 }
 
 
+static void max_best_setting(uint8_t max_led) {
+    max30105_red_pwr(max_led);
+    max30105_ir_pwr(max_led);
+    // we want max pulse width (highest resolution) which allows 400hz sampling
+    max30105_adc_config(0, 0x03, 0x03);
+    // then we'll do 4:1 averaging
+    max30105_averaging(0x02);
+    // clear any flags
+    syswait(20);
+    max30105_flags();
+
+    //  Find the smallest LSB that doesn't overflow the ALC. As far as I can
+    // tell, for a constant amount of light the LSB size is the only variable
+    // that will affect ALC capabilities.
+    for (int8_t lsb = 0; lsb <= 0x03; lsb++) {
+        max30105_adc_config(lsb, -1, -1);
+        // clear flags
+        syswait(20);
+        max30105_flags();
+        syswait(100);
+        if ((max30105_flags() & 0x20) == 0) {
+            // done.
+            return;
+        }
+    }
+    //  We couldn't avoid overflowing the ALC. Let's try backing off on the LED
+    // power, in case it's reflected light that's causing the overflow.
+    //  This is probably already a sign of a bigger problem though. I can shine
+    // my very bright LED desk light right into the sensor from <1cm away and
+    // the ALC can still function at the largest-LSB setting.
+    // TODO should binary search here, so that it can't take >25 seconds
+    for (--max_led; max_led > 0; max_led--) {
+        max30105_red_pwr(max_led);
+        max30105_ir_pwr(max_led);
+        syswait(20);
+        max30105_flags();
+        syswait(100);
+        if (max30105_flags() & 0x20 == 0) {
+            return;
+        }
+    }
+
+    //  ooh boy, our best attempt is still overflowing the ALC. not much to be
+    // done for that I guess.
+}
+
+
 int main(void) {
     timers_init();
     gpio_init();
     usb_init();
     servo_init(500, 2500);
     max30105_init();
+    max30105_adc_config(0, 0, 0);
 
     uint32_t angle = 500;
     bool sweep = false;
 
     uint8_t inchar;
+    uint8_t reg;
+    uint8_t pwidth=0, lsb=0;
     uint32_t last_loop = 0;
     pdat_t sensordat;
     while(1) {
@@ -120,6 +170,27 @@ int main(void) {
                     sensordat = max30105_read();
                     valout(sensordat.ir);
                     valout(sensordat.red);
+                    break;
+                // W to cycle through pulse width
+                case 'w':
+                    pwidth = (pwidth + 1) & 0x3;
+                    max30105_adc_config(-1, -1, pwidth);
+                    hexout(pwidth);
+                    break;
+                // B to cycle through lsb size
+                case 'b':
+                    lsb = (lsb + 1) & 0x03;
+                    max30105_adc_config(lsb, -1, -1);
+                    hexout(lsb);
+                    break;
+                // A to check for ALC overflow
+                case 'a':
+                    reg = max30105_flags();
+                    hexout(reg & 0x20);
+                    break;
+                // Z for special use
+                case 'z':
+                    max_best_setting(0x0f);
                     break;
                 // otherwise just echo out the character in hex
                 default:
